@@ -1,0 +1,29 @@
+# Ignore build artifacts
+build/
+
+# Ignore executables
+*.exe
+*.out
+*.app
+
+# Ignore object files and dependency files
+*.o
+*.obj
+*.d
+
+# Ignore logs and dumps
+*.log
+*.stackdump
+
+# Ignore VSCode settings (if you're using VSCode)
+.vscode/
+
+# Ignore MacOS/Linux junk files
+.DS_Store
+*.swp
+
+# Ignore CMake cache and files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
