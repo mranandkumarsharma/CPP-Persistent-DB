@@ -2,7 +2,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>  
 
-
 using json = nlohmann::json;
 
 Schema::Schema(const std::vector<Column>& cols) : columns(cols) {}

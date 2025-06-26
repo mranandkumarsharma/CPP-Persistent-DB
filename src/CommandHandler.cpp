@@ -19,9 +19,7 @@ void makeDir(const std::string& path) {
 #endif
 }
 
-// Internal helper function (not part of the class)
 void handleCommand(int argc, char* argv[], const std::string& command) {
-    // Your command handling code here as before...
     if (command == "create_table") {
         if (argc < 4) {
             std::cout << "Usage: cdb create_table <table> <col1:type1> <col2:type2> ...\n";
@@ -43,7 +41,7 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
             col.name = parts[0];
             try {
                 col.type = getDataType(parts[1]);
-            } catch (const std::exception& e) {
+            } catch (...) {
                 std::cout << "Invalid type: " << parts[1] << "\n";
                 return;
             }
@@ -64,12 +62,67 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         dataFile.close();
 
         std::cout << "Table '" << tableName << "' created successfully.\n";
-    } else {
+    }
+
+    else if (command == "insert") {
+        if (argc < 4) {
+            std::cout << "Usage: cdb insert <table> <val1> <val2> ...\n";
+            return;
+        }
+
+        std::string tableName = argv[2];
+        Schema schema;
+    try {
+        schema = Schema::loadFromFile(tableName);
+    } catch (const std::exception& e) {
+        std::cout << "Schema for table '" << tableName << "' not found.\n";
+        return;
+    }
+
+
+        const std::vector<Column>& columns = schema.getColumns();
+        if ((argc - 3) != columns.size()) {
+            std::cout << "Expected " << columns.size() << " values, got " << (argc - 3) << ".\n";
+            return;
+        }
+
+        std::ofstream out("data/" + tableName + ".dat", std::ios::app);
+        if (!out.is_open()) {
+            std::cout << "Failed to open data file for table '" << tableName << "'.\n";
+            return;
+        }
+
+        for (size_t i = 0; i < columns.size(); ++i) {
+            std::string val = argv[3 + i];
+            DataType expected = columns[i].type;
+
+            if (expected == DataType::INT) {
+                try { std::stoi(val); } catch (...) {
+                    std::cout << "Invalid int value for column '" << columns[i].name << "': " << val << "\n";
+                    return;
+                }
+            } else if (expected == DataType::FLOAT) {
+                try { std::stof(val); } catch (...) {
+                    std::cout << "Invalid float value for column '" << columns[i].name << "': " << val << "\n";
+                    return;
+                }
+            }
+
+            out << val;
+            if (i < columns.size() - 1)
+                out << ",";
+        }
+
+        out << "\n";
+        out.close();
+        std::cout << "Inserted 1 row into '" << tableName << "'.\n";
+    }
+
+    else {
         std::cout << "Unknown command: " << command << "\n";
     }
 }
 
-// Now the actual class method definition
 void CommandHandler::execute(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "Usage: cdb <command> [args...]\n";

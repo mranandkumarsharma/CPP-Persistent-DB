@@ -12,6 +12,7 @@ public:
     const std::vector<Column>& getColumns() const;
 
     bool saveToFile(const std::string& tableName) const;
+
     static Schema loadFromFile(const std::string& tableName);
 
 private:
