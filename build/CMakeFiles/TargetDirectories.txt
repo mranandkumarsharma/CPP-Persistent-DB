@@ -1,3 +1,0 @@
-E:/Golang/CDB/build/CMakeFiles/cdb.dir
-E:/Golang/CDB/build/CMakeFiles/edit_cache.dir
-E:/Golang/CDB/build/CMakeFiles/rebuild_cache.dir

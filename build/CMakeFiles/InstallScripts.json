@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"E:/Golang/CDB/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
