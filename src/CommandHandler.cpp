@@ -140,15 +140,13 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         return;
     }
 
-    // Read all rows
     std::vector<std::vector<std::string>> rows;
     std::string line;
     while (std::getline(dataFile, line)) {
-        rows.push_back(split(line, ',')); // assuming comma as delimiter
+        rows.push_back(split(line, ',')); 
     }
     dataFile.close();
 
-    // Determine column widths
     std::vector<size_t> colWidths;
     for (const auto& col : schema.getColumns()) {
         colWidths.push_back(col.name.size());
@@ -160,19 +158,16 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         }
     }
 
-    // Print header
     for (size_t i = 0; i < schema.getColumns().size(); ++i) {
         std::cout << "| " << std::left << std::setw(colWidths[i]) << schema.getColumns()[i].name << " ";
     }
     std::cout << "|\n";
 
-    // Print separator
     for (size_t i = 0; i < schema.getColumns().size(); ++i) {
         std::cout << "+-" << std::string(colWidths[i], '-') << "-";
     }
     std::cout << "+\n";
 
-    // Print rows
     for (const auto& row : rows) {
         for (size_t i = 0; i < row.size(); ++i) {
             std::cout << "| " << std::left << std::setw(colWidths[i]) << row[i] << " ";

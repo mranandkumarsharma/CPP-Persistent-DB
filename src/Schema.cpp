@@ -1,7 +1,7 @@
 #include "Schema.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include "Utility.hpp"  // For getDataType() and toString()
+#include "Utility.hpp"  
 
 using json = nlohmann::json;
 
@@ -27,7 +27,7 @@ bool Schema::saveToFile(const std::string& tableName) const {
         });
     }
 
-    out << j.dump(4);  // Pretty JSON
+    out << j.dump(4);  
     out.close();
     return true;
 }
