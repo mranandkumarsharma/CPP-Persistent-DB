@@ -5,6 +5,7 @@ build/
 *.exe
 *.out
 *.app
+*.bat
 
 # Ignore object files and dependency files
 *.o
