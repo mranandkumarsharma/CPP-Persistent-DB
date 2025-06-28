@@ -1,1 +1,1 @@
-# Persistent Database based on CPP. 
+# Persistent Database based on CPP
