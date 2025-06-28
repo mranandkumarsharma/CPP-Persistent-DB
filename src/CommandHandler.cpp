@@ -118,15 +118,16 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         out.close();
         std::cout << "Inserted 1 row into '" << tableName << "'.\n";
     }
-    else if (command == "dikhao") {
-    if (argc != 3) {
-        std::cout << "Usage: cdb dikhao <table>\n";
+
+
+else if (command == "dikhao") {
+    if (argc < 3) {
+        std::cout << "Usage: cdb dikhao <table> [where <col> (=|like) <value>]\n";
         return;
     }
 
     std::string tableName = argv[2];
     Schema schema;
-    
     try {
         schema = Schema::loadFromFile(tableName);
     } catch (const std::exception& e) {
@@ -140,40 +141,98 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         return;
     }
 
-    std::vector<std::vector<std::string>> rows;
+    bool useFilter = false;
+    std::string whereCol, whereOp, whereVal;
+
+    if (argc > 3 && std::string(argv[3]) == "where") {
+        if (argc == 7) {
+            useFilter = true;
+            whereCol = argv[4];
+            whereOp = argv[5];
+            whereVal = argv[6];
+        } else {
+            std::cout << "Invalid WHERE clause syntax.\n";
+            return;
+        }
+    }
+
+    int whereColIdx = -1;
+    if (useFilter) {
+        const auto& columns = schema.getColumns();
+        for (size_t i = 0; i < columns.size(); ++i) {
+            if (columns[i].name == whereCol) {
+                whereColIdx = static_cast<int>(i);
+                break;
+            }
+        }
+        if (whereColIdx == -1) {
+            std::cout << "Column not found in schema: " << whereCol << "\n";
+            return;
+        }
+    }
+
+    const auto& columns = schema.getColumns();
+    std::vector<std::vector<std::string>> allRows;
+
     std::string line;
     while (std::getline(dataFile, line)) {
-        rows.push_back(split(line, ',')); 
+        auto values = split(line, ',');  
+        if (values.size() != columns.size()) {
+            std::cout << "Skipping malformed row: " << line << "\n";
+            continue;
+        }
+        allRows.push_back(values);
     }
     dataFile.close();
 
-    std::vector<size_t> colWidths;
-    for (const auto& col : schema.getColumns()) {
-        colWidths.push_back(col.name.size());
+    std::vector<size_t> colWidths(columns.size());
+    for (size_t i = 0; i < columns.size(); ++i) {
+        colWidths[i] = columns[i].name.size();
     }
-
-    for (const auto& row : rows) {
+    for (const auto& row : allRows) {
         for (size_t i = 0; i < row.size(); ++i) {
-            colWidths[i] = std::max(colWidths[i], row[i].size());
+            if (row[i].size() > colWidths[i]) {
+                colWidths[i] = row[i].size();
+            }
         }
     }
 
-    for (size_t i = 0; i < schema.getColumns().size(); ++i) {
-        std::cout << "| " << std::left << std::setw(colWidths[i]) << schema.getColumns()[i].name << " ";
+    auto printSeparator = [&]() {
+        for (auto w : colWidths) {
+            std::cout << "+" << std::string(w + 2, '-');
+        }
+        std::cout << "+\n";
+    };
+
+    printSeparator();
+    for (size_t i = 0; i < columns.size(); ++i) {
+        std::cout << "| " << std::left << std::setw(colWidths[i]) << columns[i].name << " ";
     }
     std::cout << "|\n";
+    printSeparator();
 
-    for (size_t i = 0; i < schema.getColumns().size(); ++i) {
-        std::cout << "+-" << std::string(colWidths[i], '-') << "-";
-    }
-    std::cout << "+\n";
-
-    for (const auto& row : rows) {
-        for (size_t i = 0; i < row.size(); ++i) {
-            std::cout << "| " << std::left << std::setw(colWidths[i]) << row[i] << " ";
+    for (const auto& row : allRows) {
+        bool match = true;
+        if (useFilter) {
+            std::string cell = row[whereColIdx];
+            if (whereOp == "=") {
+                match = (cell == whereVal);
+            } else if (whereOp == "like") {
+                match = (cell.find(whereVal) != std::string::npos);
+            } else {
+                std::cout << "Unsupported operator: " << whereOp << "\n";
+                return;
+            }
         }
-        std::cout << "|\n";
+
+        if (match) {
+            for (size_t i = 0; i < row.size(); ++i) {
+                std::cout << "| " << std::left << std::setw(colWidths[i]) << row[i] << " ";
+            }
+            std::cout << "|\n";
+        }
     }
+    printSeparator();
 }
 
     else {
