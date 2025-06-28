@@ -3,6 +3,7 @@
 #include "Utility.hpp"
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #ifdef _WIN32
   #include <direct.h>
@@ -117,6 +118,68 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         out.close();
         std::cout << "Inserted 1 row into '" << tableName << "'.\n";
     }
+    else if (command == "dikhao") {
+    if (argc != 3) {
+        std::cout << "Usage: cdb dikhao <table>\n";
+        return;
+    }
+
+    std::string tableName = argv[2];
+    Schema schema;
+    
+    try {
+        schema = Schema::loadFromFile(tableName);
+    } catch (const std::exception& e) {
+        std::cout << "Failed to load schema for table: " << tableName << "\n";
+        return;
+    }
+
+    std::ifstream dataFile("data/" + tableName + ".dat");
+    if (!dataFile.is_open()) {
+        std::cout << "Failed to open data file for table: " << tableName << "\n";
+        return;
+    }
+
+    // Read all rows
+    std::vector<std::vector<std::string>> rows;
+    std::string line;
+    while (std::getline(dataFile, line)) {
+        rows.push_back(split(line, ',')); // assuming comma as delimiter
+    }
+    dataFile.close();
+
+    // Determine column widths
+    std::vector<size_t> colWidths;
+    for (const auto& col : schema.getColumns()) {
+        colWidths.push_back(col.name.size());
+    }
+
+    for (const auto& row : rows) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            colWidths[i] = std::max(colWidths[i], row[i].size());
+        }
+    }
+
+    // Print header
+    for (size_t i = 0; i < schema.getColumns().size(); ++i) {
+        std::cout << "| " << std::left << std::setw(colWidths[i]) << schema.getColumns()[i].name << " ";
+    }
+    std::cout << "|\n";
+
+    // Print separator
+    for (size_t i = 0; i < schema.getColumns().size(); ++i) {
+        std::cout << "+-" << std::string(colWidths[i], '-') << "-";
+    }
+    std::cout << "+\n";
+
+    // Print rows
+    for (const auto& row : rows) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::cout << "| " << std::left << std::setw(colWidths[i]) << row[i] << " ";
+        }
+        std::cout << "|\n";
+    }
+}
 
     else {
         std::cout << "Unknown command: " << command << "\n";

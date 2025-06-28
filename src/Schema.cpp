@@ -1,6 +1,7 @@
 #include "Schema.hpp"
 #include <fstream>
-#include <nlohmann/json.hpp>  
+#include <nlohmann/json.hpp>
+#include "Utility.hpp"  // For getDataType() and toString()
 
 using json = nlohmann::json;
 
@@ -20,26 +21,30 @@ bool Schema::saveToFile(const std::string& tableName) const {
 
     json j;
     for (const auto& col : columns) {
-        j["columns"].push_back({ {"name", col.name}, {"type", toString(col.type)} });
+        j["columns"].push_back({
+            {"name", col.name},
+            {"type", toString(col.type)}
+        });
     }
 
-    out << j.dump(4);
+    out << j.dump(4);  // Pretty JSON
+    out.close();
     return true;
 }
 
 Schema Schema::loadFromFile(const std::string& tableName) {
     std::ifstream in("metadata/" + tableName + ".meta");
-    if (!in.is_open()) throw std::runtime_error("Schema not found");
+    if (!in.is_open()) throw std::runtime_error("Schema file not found");
 
     json j;
     in >> j;
 
     std::vector<Column> cols;
-    for (auto& item : j["columns"]) {
-        Column c;
-        c.name = item["name"];
-        c.type = getDataType(item["type"]);
-        cols.push_back(c);
+    for (const auto& item : j["columns"]) {
+        Column col;
+        col.name = item["name"];
+        col.type = getDataType(item["type"]);
+        cols.push_back(col);
     }
 
     return Schema(cols);
