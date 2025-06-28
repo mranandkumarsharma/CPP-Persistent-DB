@@ -18,24 +18,24 @@ Run the executable from the command line with commands and arguments:
 ```bash
 cdb <command> <arguments...>
 ```
-1. Create Table
+1. Create Table(table_banao)
 Create a new table with specified columns and data types.
 ```bash
-cdb create_table <table_name> <col1:type1> <col2:type2> ...
+cdb table_banao <table_name> <col1:type1> <col2:type2> ...
 ```
 Example:
 ```bash
-cdb create_table users id:int name:string age:int
+cdb table_banao users id:int name:string age:int
 ```
-2. Insert Data
+2. Insert Data(insert_karo)
 Insert a new row into a table.
 ```bash
-cdb insert <table_name> <value1> <value2> ...
+cdb insert_karo <table_name> <value1> <value2> ...
 ```
 Values should be in the same order as the columns defined in the schema.
 Example:
 ```bash
-cdb insert users 1 Alice 23
+cdb insert_karo users 1 Alice 23
 ```
 3. Retrieve Data (dikhao)
 Display rows from a table optionally filtered by a WHERE clause.
