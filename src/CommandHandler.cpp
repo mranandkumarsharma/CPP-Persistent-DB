@@ -20,9 +20,9 @@ void makeDir(const std::string& path) {
 }
 
 void handleCommand(int argc, char* argv[], const std::string& command) {
-    if (command == "create_table") {
+    if (command == "table_banao") {
         if (argc < 4) {
-            std::cout << "Usage: cdb create_table <table> <col1:type1> <col2:type2> ...\n";
+            std::cout << "Usage: cdb table_banao <table> <col1:type1> <col2:type2> ...\n";
             return;
         }
 
@@ -64,9 +64,9 @@ void handleCommand(int argc, char* argv[], const std::string& command) {
         std::cout << "Table '" << tableName << "' created successfully.\n";
     }
 
-    else if (command == "insert") {
+    else if (command == "insert_karo") {
         if (argc < 4) {
-            std::cout << "Usage: cdb insert <table> <val1> <val2> ...\n";
+            std::cout << "Usage: cdb insert_karo <table> <val1> <val2> ...\n";
             return;
         }
 
