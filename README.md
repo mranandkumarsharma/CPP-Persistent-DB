@@ -1,7 +1,7 @@
 # CDB — Persistent Database in C++
 
 A simple persistent database implemented in C++ with basic CRUD operations, schema management, and simple query support including optional WHERE clauses with `=` and `like` operators.
-
+---
 ---
 
 ## Build Instructions
