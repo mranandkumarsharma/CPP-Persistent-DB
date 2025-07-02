@@ -234,6 +234,109 @@ else if (command == "dikhao") {
     }
     printSeparator();
 }
+else if (command == "update_karo") {
+    if (argc < 5 || std::string(argv[3]) != "change") {
+        std::cout << "Usage: cdb update_karo <table> change <col>=<val> [where <col> (=|like) <val>]\n";
+        return;
+    }
+
+    std::string tableName = argv[2];
+    std::string setArg = argv[4];
+
+    auto setParts = split(setArg, '=');
+    if (setParts.size() != 2) {
+        std::cout << "Invalid change format. Use <col>=<val>\n";
+        return;
+    }
+
+    std::string setCol = setParts[0];
+    std::string setVal = setParts[1];
+
+    // Optional WHERE clause
+    bool useFilter = false;
+    std::string whereCol, whereOp, whereVal;
+    if (argc >= 9 && std::string(argv[5]) == "where") {
+        useFilter = true;
+        whereCol = argv[6];
+        whereOp = argv[7];
+        whereVal = argv[8];
+    }
+
+    Schema schema;
+    try {
+        schema = Schema::loadFromFile(tableName);
+    } catch (...) {
+        std::cout << "Failed to load schema.\n";
+        return;
+    }
+
+    const auto& columns = schema.getColumns();
+    int setColIdx = -1, whereColIdx = -1;
+
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (columns[i].name == setCol) setColIdx = static_cast<int>(i);
+        if (useFilter && columns[i].name == whereCol) whereColIdx = static_cast<int>(i);
+    }
+
+    if (setColIdx == -1) {
+        std::cout << "Column to change not found in schema: " << setCol << "\n";
+        return;
+    }
+    if (useFilter && whereColIdx == -1) {
+        std::cout << "WHERE column not found in schema: " << whereCol << "\n";
+        return;
+    }
+
+    std::ifstream inFile("data/" + tableName + ".dat");
+    if (!inFile.is_open()) {
+        std::cout << "Failed to open data file.\n";
+        return;
+    }
+
+    std::vector<std::vector<std::string>> updatedRows;
+    std::string line;
+    int updateCount = 0;
+
+    while (std::getline(inFile, line)) {
+        auto values = split(line, ',');
+        if (values.size() != columns.size()) continue;
+
+        bool match = true;
+        if (useFilter) {
+            std::string cell = values[whereColIdx];
+            if (whereOp == "=") {
+                match = (cell == whereVal);
+            } else if (whereOp == "like") {
+                match = cell.find(whereVal) != std::string::npos;
+            } else {
+                std::cout << "Unsupported WHERE operator: " << whereOp << "\n";
+                return;
+            }
+        }
+
+        if (match) {
+            values[setColIdx] = setVal;
+            updateCount++;
+        }
+
+        updatedRows.push_back(values);
+    }
+    inFile.close();
+
+    std::ofstream outFile("data/" + tableName + ".dat");
+    for (const auto& row : updatedRows) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            outFile << row[i];
+            if (i != row.size() - 1) outFile << ",";
+        }
+        outFile << "\n";
+    }
+    outFile.close();
+
+    std::cout << "Updated " << updateCount << " row(s).\n";
+}
+
+
 
     else {
         std::cout << "Unknown command: " << command << "\n";
