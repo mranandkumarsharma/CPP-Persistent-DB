@@ -347,7 +347,7 @@ else if (command == "delete_karo") {
     std::string whereCol, whereOp, whereVal;
 
     if (argc >= 6 && std::string(argv[3]) == "where") {
-        if (argc == 6 + 1) { // total 7 arguments
+        if (argc == 6 + 1) { 
             useFilter = true;
             whereCol = argv[4];
             whereOp = argv[5];
@@ -439,6 +439,43 @@ else if (command == "delete_karo") {
 
     std::cout << "Deleted " << deleteCount << " row(s).\n";
 }
+else if (command == "drop_kro_table") {
+    if (argc < 3) {
+        std::cout << "Usage: cdb drop_kro_table <table>\n";
+        return;
+    }
+
+    std::string tableName = argv[2];
+    std::string metaPath = "metadata/" + tableName + ".meta";
+    std::string dataPath = "data/" + tableName + ".dat";
+
+    // Confirm with user
+    std::string confirm;
+    std::cout << "Are you sure you want to permanently delete the table '" << tableName << "'? (yes/no): ";
+    std::getline(std::cin, confirm);
+
+    if (confirm != "yes") {
+        std::cout << "Table drop cancelled.\n";
+        return;
+    }
+
+    // Delete schema file
+    if (std::remove(metaPath.c_str()) != 0) {
+        std::perror(("Failed to delete metadata file: " + metaPath).c_str());
+    } else {
+        std::cout << "Deleted metadata file.\n";
+    }
+
+    // Delete data file
+    if (std::remove(dataPath.c_str()) != 0) {
+        std::perror(("Failed to delete data file: " + dataPath).c_str());
+    } else {
+        std::cout << "Deleted data file.\n";
+    }
+
+    std::cout << "Table '" << tableName << "' dropped successfully.\n";
+}
+
 
 
 
