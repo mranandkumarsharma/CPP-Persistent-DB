@@ -335,6 +335,111 @@ else if (command == "update_karo") {
 
     std::cout << "Updated " << updateCount << " row(s).\n";
 }
+else if (command == "delete_karo") {
+    if (argc < 3) {
+        std::cout << "Usage: cdb delete_karo <table> [where <col> (=|like) <val>]\n";
+        return;
+    }
+
+    std::string tableName = argv[2];
+
+    bool useFilter = false;
+    std::string whereCol, whereOp, whereVal;
+
+    if (argc >= 6 && std::string(argv[3]) == "where") {
+        if (argc == 6 + 1) { // total 7 arguments
+            useFilter = true;
+            whereCol = argv[4];
+            whereOp = argv[5];
+            whereVal = argv[6];
+        } else {
+            std::cout << "Invalid WHERE clause syntax.\n";
+            return;
+        }
+    }
+
+    Schema schema;
+    try {
+        schema = Schema::loadFromFile(tableName);
+    } catch (...) {
+        std::cout << "Failed to load schema for table: " << tableName << "\n";
+        return;
+    }
+
+    const auto& columns = schema.getColumns();
+    int whereColIdx = -1;
+
+    if (useFilter) {
+        for (size_t i = 0; i < columns.size(); ++i) {
+            if (columns[i].name == whereCol) {
+                whereColIdx = static_cast<int>(i);
+                break;
+            }
+        }
+        if (whereColIdx == -1) {
+            std::cout << "WHERE column not found in schema: " << whereCol << "\n";
+            return;
+        }
+    }
+
+    std::ifstream inFile("data/" + tableName + ".dat");
+    if (!inFile.is_open()) {
+        std::cout << "Failed to open data file.\n";
+        return;
+    }
+
+    std::vector<std::vector<std::string>> rows;
+    std::string line;
+    int deleteCount = 0;
+
+    while (std::getline(inFile, line)) {
+        auto values = split(line, ',');
+        if (values.size() != columns.size()) continue;
+
+        bool match = true;
+        if (useFilter) {
+            std::string cell = values[whereColIdx];
+            if (whereOp == "=") {
+                match = (cell == whereVal);
+            } else if (whereOp == "like") {
+                match = cell.find(whereVal) != std::string::npos;
+            } else {
+                std::cout << "Unsupported WHERE operator: " << whereOp << "\n";
+                return;
+            }
+        }
+
+        if (match) {
+            deleteCount++;
+        } else {
+            rows.push_back(values);  // only keep unmatched rows
+        }
+    }
+    inFile.close();
+
+    if (!useFilter) {
+        std::string confirm;
+        std::cout << "Are you sure you want to delete ALL records from table '" << tableName << "'? (yes/no): ";
+        std::getline(std::cin, confirm);
+        if (confirm != "yes") {
+            std::cout << "Deletion cancelled.\n";
+            return;
+        }
+    }
+
+    std::ofstream outFile("data/" + tableName + ".dat", std::ios::trunc);
+    for (const auto& row : rows) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            outFile << row[i];
+            if (i != row.size() - 1) outFile << ",";
+        }
+        outFile << "\n";
+    }
+    outFile.close();
+
+    std::cout << "Deleted " << deleteCount << " row(s).\n";
+}
+
 
 
 
