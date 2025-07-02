@@ -476,6 +476,39 @@ else if (command == "drop_kro_table") {
     std::cout << "Table '" << tableName << "' dropped successfully.\n";
 }
 
+else if (command == "describe_kro") {
+    if (argc < 3) {
+        std::cout << "Usage: cdb describe_kro <table>\n";
+        return;
+    }
+
+    std::string tableName = argv[2];
+
+    Schema schema;
+    try {
+        schema = Schema::loadFromFile(tableName);
+    } catch (const std::exception& e) {
+        std::cout << "Failed to load schema for table: " << tableName << "\n";
+        return;
+    }
+
+    const auto& columns = schema.getColumns();
+    std::cout << "+----------------+------------+\n";
+    std::cout << "| Column Name    | Type       |\n";
+    std::cout << "+----------------+------------+\n";
+    for (const auto& col : columns) {
+        std::cout << "| " << std::setw(14) << std::left << col.name
+                  << " | " << std::setw(10) << std::left;
+        switch (col.type) {
+            case DataType::INT: std::cout << "INT"; break;
+            case DataType::STRING: std::cout << "STRING"; break;
+            case DataType::FLOAT: std::cout << "FLOAT"; break;
+            default: std::cout << "UNKNOWN"; break;
+        }
+        std::cout << " |\n";
+    }
+    std::cout << "+----------------+------------+\n";
+}
 
 
 
