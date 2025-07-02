@@ -252,7 +252,7 @@ else if (command == "update_karo") {
     std::string setCol = setParts[0];
     std::string setVal = setParts[1];
 
-    // Optional WHERE clause
+
     bool useFilter = false;
     std::string whereCol, whereOp, whereVal;
     if (argc >= 9 && std::string(argv[5]) == "where") {
@@ -449,7 +449,6 @@ else if (command == "drop_kro_table") {
     std::string metaPath = "metadata/" + tableName + ".meta";
     std::string dataPath = "data/" + tableName + ".dat";
 
-    // Confirm with user
     std::string confirm;
     std::cout << "Are you sure you want to permanently delete the table '" << tableName << "'? (yes/no): ";
     std::getline(std::cin, confirm);
