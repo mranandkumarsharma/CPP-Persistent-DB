@@ -412,7 +412,7 @@ else if (command == "delete_karo") {
         if (match) {
             deleteCount++;
         } else {
-            rows.push_back(values);  // only keep unmatched rows
+            rows.push_back(values);
         }
     }
     inFile.close();
