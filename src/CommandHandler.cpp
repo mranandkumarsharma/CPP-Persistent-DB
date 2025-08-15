@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 
 #ifdef _WIN32
   #include <direct.h>
@@ -11,6 +12,7 @@
   #include <sys/stat.h>
   #include <sys/types.h>
 #endif
+#include <catalog.hpp>
 
 void makeDir(const std::string& path) {
 #ifdef _WIN32
@@ -22,102 +24,96 @@ void makeDir(const std::string& path) {
 
 void handleCommand(int argc, char* argv[], const std::string& command) {
     if (command == "table_banao") {
-        if (argc < 4) {
-            std::cout << "Usage: cdb table_banao <table> <col1:type1> <col2:type2> ...\n";
-            return;
-        }
-
-        std::string tableName = argv[2];
-        std::vector<Column> columns;
-
-        for (int i = 3; i < argc; ++i) {
-            std::string arg = argv[i];
-            auto parts = split(arg, ':');
-            if (parts.size() != 2) {
-                std::cout << "Invalid column format: " << arg << "\n";
-                return;
-            }
-
-            Column col;
-            col.name = parts[0];
-            try {
-                col.type = getDataType(parts[1]);
-            } catch (...) {
-                std::cout << "Invalid type: " << parts[1] << "\n";
-                return;
-            }
-
-            columns.push_back(col);
-        }
-
-        Schema schema(columns);
-        makeDir("metadata");
-        makeDir("data");
-
-        if (!schema.saveToFile(tableName)) {
-            std::cout << "Failed to save schema.\n";
-            return;
-        }
-
-        std::ofstream dataFile("data/" + tableName + ".dat");
-        dataFile.close();
-
-        std::cout << "Table '" << tableName << "' created successfully.\n";
-    }
-
-    else if (command == "insert_karo") {
-        if (argc < 4) {
-            std::cout << "Usage: cdb insert_karo <table> <val1> <val2> ...\n";
-            return;
-        }
-
-        std::string tableName = argv[2];
-        Schema schema;
-    try {
-        schema = Schema::loadFromFile(tableName);
-    } catch (const std::exception& e) {
-        std::cout << "Schema for table '" << tableName << "' not found.\n";
+    if (argc < 4) {
+        std::cout << "Usage: cdb table_banao <table> <col:type[:pk][:notnull][:fk=tbl.col]> ...\n";
         return;
     }
 
+    std::string tableName = argv[2];
 
-        const std::vector<Column>& columns = schema.getColumns();
-        if ((argc - 3) != columns.size()) {
-            std::cout << "Expected " << columns.size() << " values, got " << (argc - 3) << ".\n";
+    TableDef tdef;
+    tdef.name = tableName;
+
+    for (int i = 3; i < argc; ++i) {
+        std::string spec = argv[i];
+        // split by ':'
+        auto parts = split(spec, ':'); // use your Utility::split(string, char)
+        if (parts.size() < 2) {
+            std::cout << "Invalid column spec: " << spec << "\n";
             return;
         }
-
-        std::ofstream out("data/" + tableName + ".dat", std::ios::app);
-        if (!out.is_open()) {
-            std::cout << "Failed to open data file for table '" << tableName << "'.\n";
+        ColumnDef c;
+        c.name = parts[0];
+        try {
+            c.type = getDataType(parts[1]); // your existing mapper
+        } catch (...) {
+            std::cout << "Invalid type in: " << spec << "\n";
             return;
         }
-
-        for (size_t i = 0; i < columns.size(); ++i) {
-            std::string val = argv[3 + i];
-            DataType expected = columns[i].type;
-
-            if (expected == DataType::INT) {
-                try { std::stoi(val); } catch (...) {
-                    std::cout << "Invalid int value for column '" << columns[i].name << "': " << val << "\n";
+        for (size_t k = 2; k < parts.size(); ++k) {
+            if (parts[k] == "pk") c.isPrimaryKey = true;
+            else if (parts[k] == "notnull") c.notNull = true;
+            else if (parts[k].rfind("fk=", 0) == 0) {
+                auto fk = parts[k].substr(3);
+                auto pair = split(fk, '.');
+                if (pair.size() == 2) {
+                    c.hasForeignKey = true;
+                    c.fkTable  = pair[0];
+                    c.fkColumn = pair[1];
+                } else {
+                    std::cout << "Invalid fk format in: " << spec << " (use fk=Table.Column)\n";
                     return;
                 }
-            } else if (expected == DataType::FLOAT) {
-                try { std::stof(val); } catch (...) {
-                    std::cout << "Invalid float value for column '" << columns[i].name << "': " << val << "\n";
-                    return;
-                }
+            } else {
+                std::cout << "Unknown modifier in: " << spec << " (use pk/notnull/fk=...)\n";
+                return;
             }
-
-            out << val;
-            if (i < columns.size() - 1)
-                out << ",";
         }
-
-        out << "\n";
-        out.close();
-        std::cout << "Inserted 1 row into '" << tableName << "'.\n";
+        tdef.columns.push_back(c);
     }
+
+    // Load & update catalog
+    Catalog cat = Catalog::load();
+    if (cat.tableExists(tableName)) {
+        std::cout << "Table already exists: " << tableName << "\n";
+        return;
+    }
+
+    // (Optional) Validate FK targets exist right now (stronger UX)
+    for (const auto& col : tdef.columns) {
+        if (col.hasForeignKey) {
+            auto tgt = cat.getTable(col.fkTable);
+            if (!tgt.has_value()) {
+                std::cout << "FK references missing table: " << col.fkTable << "\n";
+                return;
+            }
+            bool foundCol = false;
+            for (const auto& tc : tgt->columns) {
+                if (tc.name == col.fkColumn) { foundCol = true; break; }
+            }
+            if (!foundCol) {
+                std::cout << "FK references missing column: " << col.fkTable << "." << col.fkColumn << "\n";
+                return;
+            }
+        }
+    }
+
+    if (!cat.addTable(tdef) || !cat.save()) {
+        std::cout << "Failed to register table in catalog.\n";
+        return;
+    }
+
+    // Create empty data file
+    makeDir("data"); // use same helper as before
+    std::ofstream dataFile(("data/" + tableName + ".dat").c_str(), std::ios::app);
+    dataFile.close();
+
+    // Create per-table schema snapshot if you still use it elsewhere (optional)
+    // Or you can migrate all schema reads to Catalog instead of Schema::<...>
+
+    std::cout << "Relational table '" << tableName << "' created and registered.\n";
+}
+
 
 
 else if (command == "dikhao") {
